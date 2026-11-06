@@ -1,0 +1,39 @@
+# Dependencies and generated output
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+.vercel/
+*.tsbuildinfo
+*.log
+
+# Local configuration and credentials
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.aws/
+.codex/
+.agents/
+
+# All runtime data, backups, provider schemas and private database files
+/data/
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.db
+*.db-*
+
+# Generated service transcripts stay local; scripts can regenerate them.
+/docs/*results.json
+
+# Operating system/editor output
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
