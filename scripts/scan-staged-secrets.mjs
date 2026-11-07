@@ -5,19 +5,17 @@ if (existsSync(".env.local")) loadEnvFile(".env.local");
 const configuredSecrets = Object.entries(process.env)
   .filter(
     ([name, value]) =>
-      /(?:API_KEY|ACCESS_TOKEN|AUTH_TOKEN|SECRET|PASSWORD)$/.test(name) &&
+      /(?:API_KEY|ACCESS_TOKEN|AUTH_TOKEN|SECRET|PASSWORD|BANK_PREFIX)$/.test(
+        name,
+      ) &&
       value &&
       value.length >= 8,
   )
   .map(([, value]) => value);
-const paths = execFileSync(
-  "git",
-  ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
-  { encoding: "utf8" },
-)
+const paths = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
   .split("\0")
   .filter(Boolean);
-if (!paths.length) throw Error("No staged files to scan");
+if (!paths.length) throw Error("No indexed files to scan");
 const patterns = [
   ["private key", /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/],
   [

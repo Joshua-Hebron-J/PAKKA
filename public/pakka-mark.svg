@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 88" fill="none">
+  <title>PAKKA P-shaped handshake mark</title>
+  <defs><linearGradient id="pakka" x1="18" y1="3" x2="58" y2="84" gradientUnits="userSpaceOnUse"><stop stop-color="#A467F5"/><stop offset=".52" stop-color="#7739DD"/><stop offset="1" stop-color="#4D1CA6"/></linearGradient><linearGradient id="fold" x1="50" y1="29" x2="68" y2="52"><stop stop-color="#BE94FF"/><stop offset="1" stop-color="#8145E3"/></linearGradient></defs>
+  <path d="M15 5h31C67 5 77 17 73 35 70 51 57 61 38 61H27l-4 17c-1 5-4 8-9 8H7c-4 0-6-3-5-7L15 5Z" fill="url(#pakka)"/>
+  <path d="M31 45c18 8 34 0 42-13-2 18-16 29-35 29H27l4-16Z" fill="#4D20A5" fill-opacity=".35"/>
+  <path d="m24 30 9-9h9l6 5 5-3 11 10-8 12-12 5-11-6-9-14Z" fill="white"/>
+  <path d="m45 23-10 9c-2 2 1 5 3 4l7-5 12 12m-14-8 10 11m-15-7 10 10m-14-7 6 6" stroke="#7B43D9" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m29 36 3-3c2-2 5 1 3 3l-4 4c-2 2-5-1-3-3Zm5 4 4-4c2-2 5 1 3 3l-4 4c-2 2-5-1-3-3Zm5 4 3-3c2-2 5 1 3 3l-3 3c-2 2-5-1-3-3Z" fill="white" stroke="#7B43D9" stroke-width="1.3"/>
+</svg>

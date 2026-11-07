@@ -1,13 +1,23 @@
 import { DatabaseSync } from "node:sqlite";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { total, reminder } from "./finance";
+import { total, reminder, money } from "./finance";
 import { promiseStates, type RepaymentPromise } from "./promises";
-mkdirSync("data", { recursive: true });
-const db = new DatabaseSync(process.env.PAKKA_DB_PATH || "data/pakka.sqlite");
-db.exec(
-  `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS store (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,userId TEXT NOT NULL,expires INTEGER NOT NULL);`,
-);
+let connection: DatabaseSync | undefined;
+
+function database() {
+  if (connection) return connection;
+  mkdirSync("data", { recursive: true });
+  const db = new DatabaseSync(
+    process.env.PAKKA_DB_PATH || "data/pakka.sqlite",
+    { timeout: 5000 },
+  );
+  db.exec(
+    `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS store (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,userId TEXT NOT NULL,expires INTEGER NOT NULL);`,
+  );
+  connection = db;
+  return db;
+}
 export type Terms = {
   principal: number;
   bps: number;
@@ -33,6 +43,17 @@ export type Event = {
   memoryEligible?: boolean;
   promiseId?: string;
 };
+export type AmountUpdate = {
+  id: string;
+  by: string;
+  oldAmount: number;
+  proposedAmount: number;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  proposedAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+};
 export type Debt = {
   id: string;
   title: string;
@@ -43,7 +64,8 @@ export type Debt = {
   payments: Payment[];
   events: Event[];
   promises?: RepaymentPromise[];
-  amendment?: { by: string; terms: Terms };
+  amendment?: { by: string; terms: Terms; amountUpdateId?: string };
+  amountUpdates?: AmountUpdate[];
   alert?: string | null;
 };
 export const users = [
@@ -142,7 +164,7 @@ function seed(): Debt[] {
   ];
 }
 export function read(): Debt[] {
-  const row = db.prepare("SELECT value FROM store WHERE id=1").get() as
+  const row = database().prepare("SELECT value FROM store WHERE id=1").get() as
     { value: string } | undefined;
   if (row) return JSON.parse(row.value);
   const data = seed();
@@ -150,23 +172,23 @@ export function read(): Debt[] {
   return data;
 }
 export function save(data: Debt[]) {
-  db.prepare(
-    "INSERT INTO store(id,value) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
-  ).run(JSON.stringify(data));
+  database()
+    .prepare(
+      "INSERT INTO store(id,value) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
+    )
+    .run(JSON.stringify(data));
 }
 export function session(userId: string) {
   if (!users.some((u) => u.id === userId)) throw Error("Unknown demo user");
   const token = randomBytes(32).toString("hex");
-  db.prepare("INSERT INTO sessions VALUES(?,?,?)").run(
-    token,
-    userId,
-    Date.now() + 86400000,
-  );
+  database()
+    .prepare("INSERT INTO sessions VALUES(?,?,?)")
+    .run(token, userId, Date.now() + 86400000);
   return token;
 }
 export function authenticate(token: string | undefined) {
   const row = token
-    ? (db
+    ? (database()
         .prepare("SELECT userId FROM sessions WHERE token=? AND expires>?")
         .get(token, Date.now()) as { userId: string } | undefined)
     : undefined;
@@ -174,7 +196,7 @@ export function authenticate(token: string | undefined) {
   return row.userId;
 }
 export function logout(token: string) {
-  db.prepare("DELETE FROM sessions WHERE token=?").run(token);
+  database().prepare("DELETE FROM sessions WHERE token=?").run(token);
 }
 export function authorize(
   d: Debt | undefined,
@@ -182,6 +204,11 @@ export function authorize(
 ): asserts d is Debt {
   if (!d || ![d.lender, d.borrower].includes(user))
     throw Error("Agreement not available");
+}
+function confirmedPaid(d: Debt) {
+  return d.payments
+    .filter((p) => p.status === "confirmed")
+    .reduce((sum, p) => sum + p.amount, 0);
 }
 export function balance(d: Debt) {
   return (
@@ -198,6 +225,8 @@ export function transition(
   payload: {
     amount?: number;
     paymentId?: string;
+    amendmentId?: string;
+    reason?: string;
     terms?: Terms;
     date?: string;
     note?: string;
@@ -322,7 +351,28 @@ export function transition(
         );
         d.events[d.events.length - 1].promiseId = promise.id;
       }
-  } else if (action === "amend") {
+  } else if (action === "amend" || action === "request-amount-update") {
+    const amountOnly = action === "request-amount-update";
+    if (amountOnly) {
+      if (user !== d.borrower)
+        throw Error("Only the borrower can request an amount update");
+      if (
+        !Number.isSafeInteger(payload.amount) ||
+        !payload.amount ||
+        payload.amount < 1 ||
+        payload.amount > 10000000000 ||
+        payload.amount === d.terms.principal
+      )
+        throw Error(
+          "Enter a different positive exact agreement amount up to ₹10 crore",
+        );
+      if (!payload.reason?.trim() || payload.reason.trim().length > 500)
+        throw Error("Provide an amount update reason (1–500 characters)");
+      payload = {
+        ...payload,
+        terms: { ...d.terms, principal: payload.amount },
+      };
+    }
     if (
       d.amendment ||
       !payload.terms ||
@@ -341,7 +391,29 @@ export function transition(
         .reduce((s, p) => s + p.amount, 0)
     )
       throw Error("New total cannot be below confirmed repayments");
-    d.amendment = { by: user, terms: payload.terms };
+    if (payload.terms.principal < confirmedPaid(d))
+      throw Error("Updated amount cannot be below confirmed repayments");
+    d.amendment = { by: user, terms: { ...payload.terms } };
+    if (amountOnly) {
+      const request: AmountUpdate = {
+        id: randomUUID(),
+        by: user,
+        oldAmount: d.terms.principal,
+        proposedAmount: payload.terms.principal,
+        reason: payload.reason!.trim(),
+        status: "pending",
+        proposedAt: new Date().toISOString(),
+      };
+      (d.amountUpdates ??= []).push(request);
+      d.amendment.amountUpdateId = request.id;
+      event(
+        d,
+        "amount-update-proposed",
+        `Borrower ${user} proposed amount update ${request.id}: original principal ${money(request.oldAmount)}, proposed principal ${money(request.proposedAmount)}. Reason: ${request.reason}. Pending lender approval; original terms and balance remain active.`,
+        false,
+      );
+      return;
+    }
     event(
       d,
       "amendment",
@@ -351,7 +423,32 @@ export function transition(
   } else if (action === "approve-amendment" || action === "reject-amendment") {
     if (!d.amendment || d.amendment.by === user)
       throw Error("Counterparty approval required");
+    const requestId = d.amendment.amountUpdateId;
+    const request = requestId
+      ? d.amountUpdates?.find(
+          (r) => r.id === requestId && r.status === "pending",
+        )
+      : undefined;
+    if (
+      requestId &&
+      (!request || user !== d.lender || payload.amendmentId !== requestId)
+    )
+      throw Error("Lender must respond to the current pending amount request");
+    // A stale response for a resolved amount request must never approve a different amendment.
+    if (!requestId && payload.amendmentId)
+      throw Error("Amount request is no longer pending");
     if (action === "approve-amendment") {
+      if (
+        request &&
+        (d.amendment.terms.principal !== request.proposedAmount ||
+          request.oldAmount !== d.terms.principal ||
+          request.proposedAmount < confirmedPaid(d))
+      )
+        throw Error(
+          "Updated amount is below confirmed repayments or the request is stale",
+        );
+      if (d.amendment.terms.principal < confirmedPaid(d))
+        throw Error("Amended principal is below confirmed repayments");
       if (d.payments.some((p) => p.status === "pending"))
         throw Error("Resolve pending payments before approving an amendment");
       if (
@@ -366,11 +463,32 @@ export function transition(
           .reduce((s, p) => s + p.amount, 0)
       )
         throw Error("Amended total is below confirmed repayments");
-      d.terms = d.amendment.terms;
+      d.terms = { ...d.amendment.terms };
+      if (request) {
+        request.status = "approved";
+        request.resolvedAt = new Date().toISOString();
+        request.resolvedBy = user;
+        event(
+          d,
+          "amount-update-approved",
+          `Lender ${user} approved borrower amount update ${request.id}: principal changed from ${money(request.oldAmount)} to ${money(request.proposedAmount)}. Reason: ${request.reason}. Confirmed repayments ${money(confirmedPaid(d))} preserved. New agreed total ${money(total(d.terms.principal, d.terms.bps, d.terms.start, d.terms.due))}; outstanding balance ${money(balance(d))}. Rate, dates and installment count unchanged.`,
+        );
+      }
+      if (!request)
+        event(
+          d,
+          "amended",
+          `Both parties approved amended terms: ${JSON.stringify(d.terms)}`,
+        );
+    } else if (request) {
+      request.status = "rejected";
+      request.resolvedAt = new Date().toISOString();
+      request.resolvedBy = user;
       event(
         d,
-        "amended",
-        `Both parties approved amended terms: ${JSON.stringify(d.terms)}`,
+        "amount-update-rejected",
+        `Lender ${user} rejected borrower amount update ${request.id}: original principal ${money(request.oldAmount)}, proposed principal ${money(request.proposedAmount)}. Reason: ${request.reason}. Original terms and confirmed repayments unchanged.`,
+        false,
       );
     } else event(d, "amendment-rejected", "Amendment rejected", false);
     delete d.amendment;

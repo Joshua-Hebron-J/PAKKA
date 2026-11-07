@@ -1,0 +1,385 @@
+/* A new compact composition: hand illustration -> exact logo -> four product pillars. */
+.pakka-opening {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 38%,
+    #fff 0%,
+    #fcfaff 38%,
+    #f1e8fc 100%
+  );
+  animation: pakka-opening-out 2700ms ease both;
+  contain: layout paint;
+}
+.intro-light {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 25% 32%, #e8d9f84d, transparent 48%),
+    radial-gradient(ellipse at 80% 80%, #e9dcf766, transparent 48%);
+}
+.intro-orbit {
+  position: absolute;
+  width: min(74vw, 860px);
+  aspect-ratio: 1;
+  border: 1px solid #d5c0ef38;
+  border-radius: 50%;
+  transform: rotate(-23deg) scaleY(0.44);
+}
+.intro-orbit i {
+  position: absolute;
+  top: 12%;
+  left: 15%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #b18bd9;
+  box-shadow: 0 0 12px #a77bd650;
+  animation: intro-orbit-light 2700ms ease both;
+}
+.opening-lockup {
+  position: relative;
+  width: min(94vw, 610px);
+  text-align: center;
+  padding: 18px 0;
+}
+.opening-scene {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 244px;
+}
+.handshake-artwork {
+  position: absolute;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 9px 10px #5a386119);
+  animation: handshake-v4-into-mark 2700ms cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+.handshake-v4-pair {
+  transform-origin: 887px 455px;
+  animation: handshake-v4-clasp 2700ms ease both;
+}
+.handshake-v4-left,
+.handshake-v4-right {
+  transform-box: view-box;
+  transform-origin: 887px 455px;
+}
+.handshake-v4-left {
+  animation: handshake-v4-arrive-left 2700ms cubic-bezier(0.3, 0.65, 0.25, 1)
+    both;
+}
+.handshake-v4-right {
+  animation: handshake-v4-arrive-right 2700ms cubic-bezier(0.3, 0.65, 0.25, 1)
+    both;
+}
+
+.intro-contact-shadow {
+  position: absolute;
+  width: 42%;
+  height: 20px;
+  top: 78%;
+  background: radial-gradient(ellipse, #6b477d17, transparent 70%);
+  animation: intro-shadow 2700ms ease both;
+}
+.opening-mark {
+  position: relative;
+  width: 104px;
+  height: 114px;
+  filter: drop-shadow(0 8px 16px #7136ae14);
+  animation: intro-mark 2700ms cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+.opening-mark img {
+  display: block;
+  width: 104px;
+  height: 114px;
+}
+.opening-wordmark {
+  font-family: var(--font-brand), Arial, sans-serif;
+  font-weight: 800;
+  font-size: clamp(40px, 6vw, 56px);
+  line-height: 1.12;
+  letter-spacing: -0.065em;
+  color: #240c43;
+  margin-top: -38px;
+  animation: intro-brand 2700ms ease both;
+}
+.opening-tagline {
+  font-family: var(--font-ui), Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #715a85;
+  margin: 18px 0 0;
+  animation: intro-tagline 2700ms ease both;
+}
+.intro-features {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 12px 28px;
+  justify-content: center;
+  margin: 36px auto 0;
+  animation: intro-features 2700ms ease both;
+}
+.intro-features span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-ui), Arial, sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  color: #795e8d;
+  letter-spacing: -0.01em;
+}
+.intro-features span::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #a36fd3;
+  flex-shrink: 0;
+}
+@keyframes handshake-v4-arrive-left {
+  0%,
+  4% {
+    transform: translate(-300px, 22px) rotate(-5deg);
+  }
+  28%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+}
+@keyframes handshake-v4-arrive-right {
+  0%,
+  4% {
+    transform: translate(300px, -18px) rotate(5deg);
+  }
+  28%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+}
+@keyframes handshake-v4-clasp {
+  0%,
+  28% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(4px) rotate(0.5deg);
+  }
+  42%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+}
+@keyframes handshake-v4-into-mark {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  9%,
+  42% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  59%,
+  100% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+}
+@keyframes intro-shadow {
+  0%,
+  8% {
+    opacity: 0;
+  }
+  28%,
+  42% {
+    opacity: 1;
+  }
+  60%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes intro-mark {
+  0%,
+  43% {
+    opacity: 0;
+    transform: scale(0.78) translateY(8px);
+  }
+  63%,
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes intro-brand {
+  0%,
+  52% {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  68%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes intro-tagline {
+  0%,
+  58% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  73%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes intro-features {
+  0%,
+  65% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  79%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes intro-orbit-light {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  30%,
+  75% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(15px, -8px);
+  }
+}
+@keyframes pakka-opening-out {
+  0%,
+  88% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@media (max-width: 480px) {
+  .opening-lockup {
+    width: 94vw;
+  }
+  .opening-scene {
+    height: 210px;
+  }
+  .handshake-artwork {
+    width: 112%;
+  }
+  .opening-mark,
+  .opening-mark img {
+    width: 90px;
+    height: 99px;
+  }
+  .opening-wordmark {
+    margin-top: -24px;
+    font-size: 43px;
+  }
+  .opening-tagline {
+    font-size: 11px;
+    margin-top: 16px;
+  }
+  .intro-features {
+    gap: 12px 20px;
+    margin-top: 28px;
+  }
+  .intro-features span {
+    font-size: 10px;
+    gap: 6px;
+  }
+  .intro-orbit {
+    width: 105vw;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pakka-opening {
+    animation: pakka-opening-out 180ms linear both;
+  }
+  .pakka-opening * {
+    animation: none !important;
+  }
+  .handshake-artwork,
+  .intro-contact-shadow,
+  .intro-orbit {
+    display: none;
+  }
+  .opening-mark,
+  .opening-wordmark,
+  .opening-tagline,
+  .intro-features {
+    opacity: 1;
+    transform: none;
+  }
+}
+html {
+  scrollbar-gutter: stable;
+}
+
+.intro-replay {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  z-index: 110;
+  font:
+    600 11px var(--font-ui),
+    sans-serif;
+  color: #6330a3;
+  background: #fff;
+  border: 1px solid #d9c5ed;
+  border-radius: 22px;
+  box-shadow: 0 3px 16px #431c7410;
+  padding: 9px 14px;
+  min-height: 36px;
+}
+@media (max-width: 760px) {
+  .intro-replay {
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    right: 12px;
+  }
+}
+
+.handshake-v4-orbit {
+  opacity: 0.5;
+  animation: handshake-v4-sweep 2700ms ease both;
+}
+@keyframes handshake-v4-sweep {
+  0%,
+  12% {
+    opacity: 0;
+  }
+  32%,
+  48% {
+    opacity: 0.5;
+  }
+  65%,
+  100% {
+    opacity: 0;
+  }
+}

@@ -15,10 +15,20 @@ import {
   RefreshCw,
   X,
   ShieldCheck,
+  ListChecks,
+  History,
+  Sparkles,
+  Target,
+  ChartNoAxesColumn,
+  MoreHorizontal,
 } from "lucide-react";
 import { money, paise, installments, total } from "@/lib/finance";
 import type { Debt, Terms } from "@/lib/store";
 import AgreementTools from "./agreement-tools";
+import Brand from "./brand";
+import AgreementSummary from "./agreement-summary";
+import MoneyManager from "./money-manager";
+import AmountUpdates from "./amount-updates";
 type ViewDebt = Debt & { balance: number };
 type User = { id: string; name: string; initials: string; role: string };
 type State = {
@@ -31,9 +41,23 @@ export default function Home() {
   const [state, setState] = useState<State>();
   const [tab, setTab] = useState("Overview");
   const [selected, setSelected] = useState<string>();
+  const [featuredId, setFeaturedId] = useState<string>();
   const [form, setForm] = useState<"create" | "amend" | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  function navigate(next: string) {
+    setMoreOpen(false);
+    setTab(next);
+    setSelected(undefined);
+    setForm(null);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+  function openAgreement(id: string) {
+    setSelected(id);
+    setForm(null);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
   async function load() {
     const r = await fetch("/api/state", { cache: "no-store" });
     if (!r.ok) throw Error("Could not load dashboard");
@@ -68,6 +92,11 @@ export default function Home() {
       const data = await r.json();
       if (!r.ok) throw Error(data.error);
       await load();
+      if (p.action === "signin" || p.action === "signout") {
+        setTab("Overview");
+        setSelected(undefined);
+        setFeaturedId(undefined);
+      }
       setForm(null);
     } catch (e) {
       setError((e as Error).message);
@@ -78,9 +107,7 @@ export default function Home() {
   if (!state)
     return (
       <main className="loading">
-        <div className="brand">
-          p<span>·</span> PAKKA
-        </div>
+        <Brand />
         <p>{error || "Getting your promises in order…"}</p>
         {error && <button onClick={() => location.reload()}>Retry</button>}
       </main>
@@ -89,16 +116,14 @@ export default function Home() {
     return (
       <main className="signin">
         <div className="signin-story">
-          <div className="brand">
-            p<span>·</span> PAKKA
-          </div>
+          <Brand tagline />
           <div className="eyebrow">MONEY IS PERSONAL. KEEP IT THAT WAY.</div>
           <h1>
             Good friends.
             <br />
             Clear promises.
           </h1>
-          <p>Every Rupee. Every Promise. Remembered.</p>
+          <p>Money between people. Clarity between friends.</p>
           <div className="orbit">
             <Handshake size={80} />
             <span>Clarity feels good.</span>
@@ -157,6 +182,34 @@ export default function Home() {
     .filter((d) => d.alert === "overdue")
     .reduce((s, d) => s + d.balance, 0);
   const d = state.debts.find((x) => x.id === selected);
+  const featured =
+    active.find((d) => d.id === featuredId) ||
+    [...active].reverse().find((d) => d.promises?.length) ||
+    active[0];
+  const workspaceTab = [
+    "Overview",
+    "Promise Tracker",
+    "Timeline",
+    "Memory",
+  ].includes(tab);
+  const personalTab = [
+    "Money Manager",
+    "Budgets",
+    "Savings Goals",
+    "AI Coach",
+  ].includes(tab);
+  const navItems = [
+    ["Overview", LayoutDashboard, "Home"],
+    ["Money Manager", Wallet, "Money Manager"],
+    ["Budgets", ChartNoAxesColumn, "Budgets"],
+    ["Savings Goals", Target, "Savings Goals"],
+    ["AI Coach", BrainCircuit, "AI Coach"],
+    ["Agreements", Handshake, "Agreements"],
+    ["Promise Tracker", ListChecks, "Promise Tracker"],
+    ["Timeline", History, "Timeline"],
+    ["Memory", Sparkles, "AI Insights"],
+    ["Reminders", Bell, "Reminders"],
+  ] as const;
   const activities = state.debts
     .flatMap((d) =>
       d.events.map((e) => ({ ...e, title: d.title, debtId: d.id })),
@@ -165,29 +218,22 @@ export default function Home() {
   return (
     <div className="shell">
       <aside>
-        <div className="brand">
-          p<span>·</span> PAKKA
-        </div>
+        <Brand />
         <small className="sidebar-caption">A LITTLE CLARITY, EVERY DAY</small>
-        <nav>
-          {[
-            ["Overview", LayoutDashboard],
-            ["Agreements", Handshake],
-            ["Memory", BrainCircuit],
-            ["Reminders", Bell],
-          ].map(([name, Icon]) => {
+        <nav aria-label="Main navigation">
+          {navItems.map(([name, Icon, label]) => {
             const I = Icon as typeof Wallet;
             return (
               <button
                 key={name as string}
                 className={tab === name ? "nav active" : "nav"}
+                aria-current={tab === name ? "page" : undefined}
                 onClick={() => {
-                  setTab(name as string);
-                  setSelected(undefined);
+                  navigate(name as string);
                 }}
               >
                 <I size={19} />
-                {name as string}
+                {label}
                 {name === "Reminders" && (
                   <b>{active.filter((d) => d.alert).length}</b>
                 )}
@@ -222,7 +268,13 @@ export default function Home() {
       <main className="workspace">
         <header>
           <div className="breadcrumb">
-            Your space <span>/</span> <strong>{tab}</strong>
+            <span className="header-brand-mobile">
+              <Brand />
+            </span>
+            <span className="desktop-breadcrumb">
+              Your space <span>/</span>{" "}
+              <strong>{navItems.find((n) => n[0] === tab)?.[2] || tab}</strong>
+            </span>
           </div>
           <div className="header-right">
             <button
@@ -234,37 +286,73 @@ export default function Home() {
               <LogOut size={17} />
             </button>
             <span className="demo-tag">DEMO MODE</span>
-            <button aria-label="Reminders" onClick={() => setTab("Reminders")}>
+            <button
+              aria-label="Reminders"
+              aria-current={tab === "Reminders" ? "page" : undefined}
+              onClick={() => {
+                navigate("Reminders");
+              }}
+            >
               <Bell size={19} />
             </button>
-            <span className="avatar small">{me.initials}</span>
+            <button
+              className="account-switch"
+              aria-label="Switch account"
+              title="Switch demo account"
+              disabled={busy}
+              onClick={() => act({ action: "signout" })}
+            >
+              <span className="avatar small">{me.initials}</span>
+              <span className="account-switch-name">
+                {me.name.split(" ")[0]}
+              </span>
+            </button>
           </div>
         </header>
         <div className="content">
           <div className="page-heading">
             <div>
-              <div className="eyebrow">A CLEARER PICTURE</div>
+              <div className="eyebrow">YOUR PROMISES, IN GOOD HANDS</div>
               <h1>
-                {tab === "Overview"
-                  ? `Hey, ${me.name.split(" ")[0]}. All accounted for.`
-                  : tab === "Memory"
-                    ? "Some things deserve to be remembered."
-                    : tab === "Reminders"
-                      ? "A gentle nudge goes a long way."
-                      : "Every agreement, in one place."}
+                {personalTab
+                  ? tab
+                  : tab === "Overview"
+                    ? `Good to see you, ${me.name.split(" ")[0]}.`
+                    : tab === "Memory"
+                      ? "A little context. A clearer next step."
+                      : tab === "Reminders"
+                        ? "A gentle nudge goes a long way."
+                        : tab === "Promise Tracker"
+                          ? "A promise worth keeping."
+                          : tab === "Timeline"
+                            ? "The story behind every promise."
+                            : "Every agreement, in one place."}
               </h1>
-              <p>Less keeping track. More peace of mind.</p>
+              <p>
+                {personalTab
+                  ? "A clearer view of your money. Private, purposeful, and in your hands."
+                  : "Track agreements, promises, and repayments with AI memory."}
+              </p>
             </div>
-            <button
-              className="primary"
-              disabled={busy}
-              onClick={() => {
-                setForm("create");
-                setSelected(undefined);
-              }}
-            >
-              <Plus size={18} /> New agreement
-            </button>
+            {personalTab ? (
+              <span className="privacy-pill">
+                <ShieldCheck size={17} />
+                Private ledger
+              </span>
+            ) : (
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: "auto" });
+                  setForm("create");
+                  setTab("Agreements");
+                  setSelected(undefined);
+                }}
+              >
+                <Plus size={18} /> New agreement
+              </button>
+            )}
           </div>
           {error && (
             <div className="error" role="alert">
@@ -314,20 +402,78 @@ export default function Home() {
                   <small>A good time to check in</small>
                 </div>
               </div>
-              <div className="banner">
-                <span className="banner-icon">
-                  <BrainCircuit />
-                </span>
-                <div>
-                  <strong>A memory for your money.</strong>
-                  <p>
-                    Context from confirmed events, so the next conversation
-                    starts with clarity.
-                  </p>
+            </>
+          )}
+          {!d &&
+            ["Overview", "Agreements"].includes(tab) &&
+            state.debts.some((x) => x.amendment?.amountUpdateId) && (
+              <section
+                className="amount-update-inbox"
+                aria-label="Pending amount requests"
+              >
+                <h2>Pending amount requests</h2>
+                {state.debts
+                  .filter((x) => x.amendment?.amountUpdateId)
+                  .map((x) => (
+                    <button key={x.id} onClick={() => openAgreement(x.id)}>
+                      <strong>{x.title}</strong>
+                      <span>
+                        {money(x.terms.principal)} →{" "}
+                        {money(x.amendment!.terms.principal)} · Pending{" "}
+                        {x.lender === me.id
+                          ? "your decision"
+                          : "lender approval"}
+                      </span>
+                      <ArrowRight size={17} />
+                    </button>
+                  ))}
+              </section>
+            )}
+          {!d && workspaceTab && featured && (
+            <>
+              <div className="workspace-toolbar">
+                <div className="view-label">
+                  <span className="live-dot">●</span> Your shared space
                 </div>
-                <button onClick={() => setTab("Memory")}>
-                  Explore memory <ArrowRight size={17} />
-                </button>
+                <label className="agreement-picker">
+                  Agreement
+                  <select
+                    value={featured.id}
+                    onChange={(e) => setFeaturedId(e.target.value)}
+                  >
+                    {active.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div
+                className={`feature-grid ${tab !== "Overview" ? "focused-view" : ""}`}
+              >
+                <AgreementSummary
+                  d={featured}
+                  users={state.users}
+                  currentUserId={me.id}
+                  onOpen={() => openAgreement(featured.id)}
+                />
+                <AgreementTools
+                  key={`${featured.id}-${me.id}-${featured.events.at(-1)?.id}-${tab}`}
+                  d={featured}
+                  userId={me.id}
+                  onAction={act}
+                  busy={busy}
+                  section={
+                    tab === "Promise Tracker"
+                      ? "promises"
+                      : tab === "Timeline"
+                        ? "timeline"
+                        : tab === "Memory"
+                          ? "insights"
+                          : "all"
+                  }
+                />
               </div>
             </>
           )}
@@ -356,7 +502,9 @@ export default function Home() {
               />
             </section>
           )}
-          {d ? (
+          {personalTab ? (
+            <MoneyManager key={`${me.id}:${tab}`} view={tab} />
+          ) : d ? (
             <section className="card detail">
               <button
                 className="text-button"
@@ -499,7 +647,7 @@ export default function Home() {
                   </p>
                 </>
               )}
-              {d.amendment && (
+              {d.amendment && !d.amendment.amountUpdateId && (
                 <div className="callout">
                   <strong>Amendment awaiting mutual approval</strong>
                   <p>
@@ -531,6 +679,13 @@ export default function Home() {
                   )}
                 </div>
               )}
+              <AmountUpdates
+                key={d.id}
+                debt={d}
+                userId={me.id}
+                busy={busy}
+                onAction={act}
+              />
               <h3>Payment ledger</h3>
               {!d.payments.length && (
                 <p className="muted">
@@ -577,7 +732,8 @@ export default function Home() {
                 busy={busy}
               />
             </section>
-          ) : tab === "Memory" ? (
+          ) : workspaceTab && featured && tab !== "Overview" ? null : tab ===
+            "Memory" ? (
             <section className="card memory-intro">
               <BrainCircuit size={40} />
               <h2>Remember the context. Respect the facts.</h2>
@@ -594,7 +750,7 @@ export default function Home() {
               </span>
               <p>Select an agreement to compare memory on and off.</p>
               {state.debts.map((d) => (
-                <button key={d.id} onClick={() => setSelected(d.id)}>
+                <button key={d.id} onClick={() => openAgreement(d.id)}>
                   {d.title} <ArrowRight size={16} />
                 </button>
               ))}
@@ -620,7 +776,7 @@ export default function Home() {
                   <button
                     className="reminder-row"
                     key={d.id}
-                    onClick={() => setSelected(d.id)}
+                    onClick={() => openAgreement(d.id)}
                   >
                     <Bell />
                     <div>
@@ -647,7 +803,7 @@ export default function Home() {
                   <button
                     className="text-button"
                     onClick={() =>
-                      setTab(tab === "Overview" ? "Agreements" : "Overview")
+                      navigate(tab === "Overview" ? "Agreements" : "Overview")
                     }
                   >
                     {tab === "Overview" ? "View all" : "Overview"}{" "}
@@ -663,7 +819,7 @@ export default function Home() {
                     className="debt-row"
                     key={d.id}
                     onClick={() => {
-                      setSelected(d.id);
+                      openAgreement(d.id);
                     }}
                   >
                     <span
@@ -725,7 +881,7 @@ export default function Home() {
                     <button
                       className="activity-row"
                       key={e.id}
-                      onClick={() => setSelected(e.debtId)}
+                      onClick={() => openAgreement(e.debtId)}
                     >
                       <span
                         className={`activity-icon ${e.verified ? "verified" : ""}`}
@@ -777,6 +933,71 @@ export default function Home() {
           </footer>
         </div>
       </main>
+      <nav className="bottom-nav" aria-label="Mobile navigation">
+        {navItems
+          .filter((n) =>
+            ["Overview", "Money Manager", "Agreements", "AI Coach"].includes(
+              n[0],
+            ),
+          )
+          .map(([name, Icon, label]) => (
+            <button
+              key={name}
+              aria-current={tab === name ? "page" : undefined}
+              className={tab === name ? "active" : ""}
+              onClick={() => {
+                navigate(name);
+              }}
+            >
+              <Icon size={21} />
+              <span>
+                {name === "Promise Tracker"
+                  ? "Tracker"
+                  : name === "Memory"
+                    ? "Insights"
+                    : name === "Money Manager"
+                      ? "Money"
+                      : name === "AI Coach"
+                        ? "Coach"
+                        : label}
+              </span>
+            </button>
+          ))}
+        <button
+          aria-label="More navigation"
+          aria-expanded={moreOpen}
+          className={moreOpen ? "active" : ""}
+          onClick={() => setMoreOpen(!moreOpen)}
+        >
+          <MoreHorizontal size={21} />
+          <span>More</span>
+        </button>
+      </nav>
+      {moreOpen && (
+        <nav className="mobile-more" aria-label="More pages">
+          {navItems
+            .filter(
+              (n) =>
+                ![
+                  "Overview",
+                  "Money Manager",
+                  "Agreements",
+                  "AI Coach",
+                ].includes(n[0]),
+            )
+            .map(([name, Icon, label]) => (
+              <button
+                key={name}
+                onClick={() => navigate(name)}
+                aria-current={tab === name ? "page" : undefined}
+              >
+                <Icon size={20} />
+                {label}
+              </button>
+            ))}
+          <button onClick={() => setMoreOpen(false)}>Close menu</button>
+        </nav>
+      )}
     </div>
   );
 }
