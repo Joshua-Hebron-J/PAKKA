@@ -169,3 +169,7 @@ All hand paths were removed from `opening-animation.tsx`; it now imports the new
 **Development-only Replay Intro:** `npm run dev` shows a **Replay Intro** button at the bottom right (above mobile navigation). It remounts only the decorative intro and preserves the current application/page state. The button is absent from production and test modes; this is verified by unit tests and an actual isolated production render. Normal page navigation still does not replay the intro. Duration remains 2.7 seconds, with reduced-motion static logo and the existing fail-open behavior.
 
 Superseded intro-only screenshots were moved to ignored `data/retired-loading-artwork/`; documentation links now point to current reference V4 captures. Only fingerprints of retired paths are kept in source; the temporary raw source backup was removed. Current evidence: [desktop handshake](docs/pakka-handshake-v4-desktop.png), [mobile handshake](docs/pakka-handshake-v4-mobile.png), [logo reveal](docs/pakka-handshake-v4-logo.png), [mobile logo](docs/pakka-handshake-v4-logo-mobile.png). No financial data, Hindsight behavior, or branding was modified. No commit, push or deployment.
+
+## Band AI review
+
+Band AI Desktop performed a read-only review of PAKKA's Hindsight integration, agreement workflow, memory consent, and technical limitations. See the [Band AI review](docs/BAND_AI_REVIEW.md). The review did not rerun live-provider verification.
